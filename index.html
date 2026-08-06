@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ખંડેવાળ પ્રાથમિક શાળા - ક્વિઝ પોર્ટલ</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root {
+            --primary: #1e3c72;
+            --secondary: #2a5298;
+            --accent: #ff416c;
+            --success: #28a745;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333333;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        .container { max-width: 900px; margin: 20px auto; background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2, h3 { color: var(--primary); text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        .action-btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; margin-top: 10px; }
+        .action-btn:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; }
+        th { background: var(--primary); color: white; }
+        .view-section { display: none; }
+        .active-view { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏫 ખંડેવાળ પ્રાથમિક શાળા - ડિજિટલ લર્નિંગ પ્લેટફોર્મ</h2>
+
+    <!-- ૧. વિદ્યાર્થી લોગિન વ્યુ (Student Login View) -->
+    <div id="student-login-view" class="view-section active-view">
+        <h3> વિદ્યાર્થી લોગિન (સુરક્ષિત)</h3>
+        <div class="form-group">
+            <label>પૂરું નામ:</label>
+            <input type="text" id="login-s-name" placeholder="તમારું સાચું નામ લખો">
+        </div>
+        <div class="form-group">
+            <label>ધોરણ:</label>
+            <select id="login-s-std">
+                <option value="6">ધોરણ 6</option>
+                <option value="7">ધોરણ 7</option>
+                <option value="8" selected>ધોરણ 8</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>વર્ગ (Class/Division):</label>
+            <select id="login-s-div">
+                <option value="A" selected>અ (A)</option>
+                <option value="B">બ (B)</option>
+                <option value="C">ક (C)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>રોલ નંબર:</label>
+            <input type="number" id="login-s-roll" placeholder="તમારો હાજરી નંબર લખો">
+        </div>
+        <div class="form-group">
+            <label>પિન કોડ (સિક્રેટ પિન):</label>
+            <input type="password" id="login-s-pin" placeholder="તમારો પિન નાખો">
+        </div>
+        <button class="action-btn" onclick="studentLogin()">લોગિન કરો</button>
+    </div>
+
+    <!-- ૨. વિદ્યાર્થી ડેશબોર્ડ વ્યુ (Student Dashboard View) -->
+    <div id="student-dashboard-view" class="view-section">
+        <h3 id="std-welcome-msg">સ્વાગત છે!</h3>
+        <p id="std-profile-info" style="text-align: center; font-weight: bold; color: var(--secondary);"></p>
+        <hr>
+        <div class="form-group">
+            <label>ટેસ્ટ વિષય પસંદ કરો:</label>
+            <select id="student-topic-select"></select>
+        </div>
+        <button class="action-btn" onclick="startTest()">ટેસ્ટ શરૂ કરો</button>
+        <button class="action-btn" onclick="switchView('student-login-view')" style="background: #6c757d; margin-top: 10px;">લોગઆઉટ</button>
+    </div>
+
+    <!-- ૩. સર્ટિફિકેટ વ્યુ (Certificate View) સાથે પાછા ફરવાનું બટન -->
+    <div id="certificate-view" class="view-section" style="text-align: center;">
+        <h3 style="color: var(--success);">🎉 અભિનંદન! ટેસ્ટ પૂર્ણ થઈ ગઈ છે.</h3>
+        <div id="certificate-content" style="border: 4px solid var(--primary); padding: 20px; border-radius: 10px; margin: 20px 0; background: #fffbe6;">
+            <!-- ડાયનેમિક સર્ટિફિકેટ ડેટા અહીં આવશે -->
+        </div>
+        <button class="action-btn" onclick="backToDashboardFromCert()" style="background: var(--success);">⬅️ ડેશબોર્ડ પર પાછા જાઓ</button>
+    </div>
+
+    <!-- ૪. એડમીન પેનલ / ફિલ્ટર અને ડિલીટ ડેશબોર્ડ (Admin Panel View) -->
+    <div id="admin-view" class="view-section">
+        <h3 style="color:var(--primary);">📊 એડમીન પેનલ: ટેસ્ટ રિઝલ્ટ ફિલ્ટર અને ડિલીટ મેનેજમેન્ટ</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px;">
+            <div>
+                <label style="font-size:13px;">ધોરણ:</label>
+                <select id="filter-std"><option value="all">બધા ધોરણો</option><option value="6">ધોરણ 6</option><option value="7">ધોરણ 7</option><option value="8">ધોરણ 8</option></select>
+            </div>
+            <div>
+                <label style="font-size:13px;">વિષય:</label>
+                <select id="filter-subject">
+                    <option value="all">બધા વિષય</option>
+                    <option value="english">અંગ્રેજી</option>
+                    <option value="gujarati">ગુજરાતી</option>
+                    <option value="maths">ગણિત</option>
+                    <option value="science">વિજ્ઞાન</option>
+                    <option value="social_science">સામાજિક વિજ્ઞાન</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-size:13px;">સત્ર:</label>
+                <select id="filter-term"><option value="all">બધા સત્ર</option><option value="S1">સત્ર 1</option><option value="S2">સત્ર 2</option></select>
+            </div>
+            <div>
+                <label style="font-size:13px;">વિભાગ:</label>
+                <select id="filter-section"><option value="all">બધા</option><option value="Test">પાઠ્યપુસ્તક (Test)</option><option value="Grammar">વ્યાકરણ</option></select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+            <button class="action-btn" onclick="loadAdminData()" style="background: var(--secondary); flex: 1;">🔍 ફિલ્ટર કરી રિઝલ્ટ જુઓ</button>
+            <button class="action-btn" onclick="deleteFilteredResults()" style="background: var(--accent); flex: 1;">🗑️ આ ફિલ્ટર મુજબના બધા રિઝલ્ટ ડિલીટ કરો</button>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ક્રમ</th>
+                        <th>નામ</th>
+                        <th>ધોરણ/વર્ગ</th>
+                        <th>રોલ નં</th>
+                        <th>વિષય/ટેસ્ટ</th>
+                        <th>ગુણ</th>
+                        <th>ટકા</th>
+                        <th>તારીખ</th>
+                        <th>ડિલિટ</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-table-data">
+                    <tr><td colspan="9">માહિતી લોડ કરવા બટન દબાવો...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Firebase Configuration (તમારી એપ મુજબ સેટ કરેલું)
+    const firebaseConfig = {
+        databaseURL: "https://khandewal-primary-school-default-rtdb.firebaseio.com/"
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const database = firebase.database();
+
+    let studentInfo = {};
+
+    function switchView(viewId) {
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
+        document.getElementById(viewId).classList.add('active-view');
+    }
+
+    // ૧. સખત સુરક્ષિત લોગિન ફંક્શન (ડુપ્લીકેટ નામ/રોલ નંબર અટકાવવા)
+    function studentLogin() {
+        const name = document.getElementById('login-s-name').value.trim();
+        const std = document.getElementById('login-s-std').value;
+        const div = document.getElementById('login-s-div').value;
+        const roll = document.getElementById('login-s-roll').value.trim();
+        const pin = document.getElementById('login-s-pin').value.trim();
+
+        if(!name || !roll || !pin) {
+            alert("કૃપા કરીને પૂરું નામ, રોલ નંબર અને પિન કોડ દાખલ કરો!");
+            return;
+        }
+
+        const studentKey = `${std}_${div}_${roll}`;
+        const studentRef = database.ref(`khandewal_registered_students/${studentKey}`);
+
+        studentRef.once('value', (snapshot) => {
+            const existingData = snapshot.val();
+
+            if (existingData) {
+                if (existingData.name.trim().toLowerCase() !== name.toLowerCase()) {
+                    alert("❌ સુરક્ષા ભૂલ: આ રોલ નંબર પર પહેલેથી જ અન્ય વિદ્યાર્થી (" + existingData.name + ") નોંધાયેલ છે! સાચો રોલ નંબર નાખો.");
+                    return;
+                }
+                if (existingData.pin && existingData.pin !== pin) {
+                    alert("❌ ખોટો પિન કોડ! તમારો સાચો સિક્રેટ પિન દાખલ કરો.");
+                    return;
+                }
+            }
+
+            studentInfo = { name, std, div, roll };
+            document.getElementById('std-welcome-msg').innerText = `સ્વાગત છે, ${name}!`;
+            document.getElementById('std-profile-info').innerText = `ધોરણ: ${std} | વર્ગ: ${div} | રોલ નંબર: ${roll}`;
+
+            const studentRecord = { name, std, div, roll, pin, lastLogin: new Date().toLocaleString() };
+            
+            studentRef.set(studentRecord).then(() => {
+                switchView('student-dashboard-view');
+                loadStudentTopicsList();
+            }).catch(error => {
+                alert("લોગિન સેવ કરવામાં ભૂલ: " + error.message);
+            });
+        });
+    }
+
+    function loadStudentTopicsList() {
+        const select = document.getElementById('student-topic-select');
+        select.innerHTML = `<option value="sample_test">નમૂનાની ટેસ્ટ (Sample Test)</option>`;
+    }
+
+    function startTest() {
+        alert("ટેસ્ટ મોડ ચાલુ છે. (તમારું ટેસ્ટ પેજ અહીં ખુલશે)");
+        // ટેસ્ટ પૂર્ણ થયા બાદ સર્ટિફિકેટ વ્યુ પર જવા માટે: switchView('certificate-view');
+    }
+
+    // ૨. સર્ટિફિકેટ સ્ક્રીન પરથી પાછા ડેશબોર્ડ પર જવા માટેનું ફંક્શન
+    function backToDashboardFromCert() {
+        switchView('student-dashboard-view');
+    }
+
+    // ૩. એડમીન પેનલ ફિલ્ટર ડેટા લોડ ફંક્શન
+    function loadAdminData() {
+        let tbody = document.getElementById('admin-table-data');
+        tbody.innerHTML = `<tr><td colspan="9">ડેટા લોડ થઈ રહ્યો છે...</td></tr>`;
+
+        const fStd = document.getElementById('filter-std').value;
+        const fSub = document.getElementById('filter-subject').value;
+        const fTerm = document.getElementById('filter-term').value;
+        const fSec = document.getElementById('filter-section').value;
+
+        database.ref('khandewal_school_results').once('value', (snapshot) => {
+            const data = snapshot.val();
+            if(!data) return tbody.innerHTML = `<tr><td colspan="9">કોઈ રેકોર્ડ ઉપલબ્ધ નથી.</td></tr>`;
+
+            let html = '';
+            let count = 0;
+
+            Object.keys(data).forEach((key) => {
+                let res = data[key];
+                let matchStd = (fStd === 'all' || res.std === fStd);
+                let matchSub = (fSub === 'all' || res.subject === fSub);
+                let matchTerm = (fTerm === 'all' || res.term === fTerm);
+                let matchSec = (fSec === 'all' || res.sectionType === fSec);
+
+                if(matchStd && matchSub && matchTerm && matchSec) {
+                    count++;
+                    html += `<tr>
+                        <td>${count}</td>
+                        <td>${res.name}</td>
+                        <td>${res.std}-${res.div}</td>
+                        <td>${res.roll}</td>
+                        <td>${res.topic || 'General'}</td>
+                        <td>${res.score || 0}/${res.total || 0}</td>
+                        <td style="color:${res.percentage>=70?'var(--success)':'red'};">${res.percentage || 0}%</td>
+                        <td>${res.date || 'N/A'}</td>
+                        <td><button onclick="deleteSingleResult('${key}')" style="background:var(--accent); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">ડિલિટ 🗑️</button></td>
+                    </tr>`;
+                }
+            });
+            tbody.innerHTML = html || `<tr><td colspan="9">આ ફિલ્ટર મુજબ કોઈ રેકોર્ડ મળ્યો નથી.</td></tr>`;
+        });
+    }
+
+    // ૪. સિંગલ રિઝલ્ટ ડિલીટ કરવા માટેનું ફંક્શન
+    function deleteSingleResult(key) {
+        if(confirm("શું તમે ખરેખર આ ટેસ્ટ રિઝલ્ટને કાયમ માટે ડિલીટ કરવા માંગો છો?")) {
+            database.ref(`khandewal_school_results/${key}`).remove()
+                .then(() => {
+                    alert("🗑️ રિઝલ્ટ સફળતાપૂર્વક ડિલીટ થઈ ગયું છે!");
+                    loadAdminData();
+                })
+                .catch(e => alert("ભૂલ: " + e.message));
+        }
+    }
+
+    // ૫. ફિલ્ટર કરેલા બધા રિઝલ્ટ એકસાથે ડિલીટ કરવા માટે (બલ્ક ડિલીટ)
+    function deleteFilteredResults() {
+        if(confirm("⚠️ ચેતવણી: આ ફિલ્ટર હેઠળ દેખાતા તમામ વિદ્યાર્થીઓના ટેસ્ટ રિઝલ્ટ કાયમ માટે ડિલીટ થઈ જશે. શું તમે ચોક્કસ છો?")) {
+            const fStd = document.getElementById('filter-std').value;
+            const fSub = document.getElementById('filter-subject').value;
+            const fTerm = document.getElementById('filter-term').value;
+            const fSec = document.getElementById('filter-section').value;
+
+            database.ref('khandewal_school_results').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if(!data) return alert("કોઈ રેકોર્ડ મળ્યો નથી.");
+
+                let updates = {};
+                let count = 0;
+
+                Object.keys(data).forEach((key) => {
+                    let res = data[key];
+                    let matchStd = (fStd === 'all' || res.std === fStd);
+                    let matchSub = (fSub === 'all' || res.subject === fSub);
+                    let matchTerm = (fTerm === 'all' || res.term === fTerm);
+                    let matchSec = (fSec === 'all' || res.sectionType === fSec);
+
+                    if(matchStd && matchSub && matchTerm && matchSec) {
+                        updates[key] = null;
+                        count++;
+                    }
+                });
+
+                if(count === 0) {
+                    alert("આ ફિલ્ટર મુજબ ડિલીટ કરવા માટે કોઈ રિઝલ્ટ મળ્યા નથી.");
+                    return;
+                }
+
+                database.ref('khandewal_school_results').update(updates)
+                    .then(() => {
+                        alert(`🗑️ સફળતાપૂર્વક ${count} ટેસ્ટ રિઝલ્ટ ડિલીટ કરી દેવામાં આવ્યા છે!`);
+                        loadAdminData();
+                    })
+                    .catch(e => alert("ભૂલ: " + e.message));
+            });
+        }
+    }
+</script>
+</body>
+</html>
